@@ -1,6 +1,10 @@
+from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple, Union
 from aenum import MultiValueEnum
+from pathlib import Path
+import json
 import numpy as np
+import datetime as dt
 
 
 class Move(MultiValueEnum):
@@ -530,7 +534,47 @@ class Game:
             if changed:
                 self.add_board_randomization()
 
+    def serialize(self) -> Dict[str, Any]:
+        game_dct = {
+            "board_shape": self.board_shape,
+            "random_config": self.random_config,
+            "board": self.board.tolist(),
+            "sum_score": self.sum_score,
+            "continue_game_if_win": self.continue_game_if_win,
+        }
+        return game_dct
+
+    @staticmethod
+    def deserialize(game_dct: Dict[str, Any]) -> Game:
+        board_shape = tuple(game_dct["board_shape"])
+        random_config = game_dct["random_config"]
+        random_config["probs"] = {int(k): v for k, v in game_dct["random_config"]["probs"].items()}
+        
+        g = Game(board_shape, random_config)
+        g.board = np.array(game_dct["board"])
+        g.sum_score = game_dct["sum_score"]
+        g.continue_game_if_win = game_dct["continue_game_if_win"]
+        return g
+
+    def save(self, path: Optional[Union[Path, str]] = None) -> Path:
+        if path is None:
+            dt_now = dt.datetime.now()
+            path = Path(f"{dt_now}.json")
+
+        path = Path(path)
+
+        with open(path, "w+") as f:
+            json.dump(self.serialize(), f)
+        
+        return path
+
+    @staticmethod
+    def load(path: Union[Path, str]) -> Game:
+        with open(path, "r") as f:
+            game_dct = json.load(f)
+        return Game.deserialize(game_dct)
+
 
 if __name__ == "__main__":
-    g = Game(board_shape=4, random_config={"count": 20, "probs": {2: 1}})
+    g = Game(board_shape=4, random_config={"count": 1, "probs": {2: 1}})
     g.start()
