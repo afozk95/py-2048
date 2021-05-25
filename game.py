@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from aenum import MultiValueEnum
 from collections import defaultdict
 from pathlib import Path
@@ -67,7 +67,7 @@ class Game:
         Returns:
             int: max score
         """
-        return np.max(self.board)
+        return int(np.max(self.board))
 
     @property
     def game_status(self) -> GameStatus:
@@ -184,8 +184,8 @@ class Game:
         """
         def _is_power_of_two_or_zero(n: int) -> bool:
             return (n & (n-1) == 0)
-        def _normalize_to_sum_one(values: np.ndarray) -> np.ndarray:
-            return values / np.sum(values)
+        def _normalize_to_sum_one(values: List[float]) -> List[float]:
+            return list(values / np.sum(values))
 
         if isinstance(probs, dict):
             if (
@@ -336,7 +336,7 @@ class Game:
         for r in range(self.board_shape[0]):
             for c in range(self.board_shape[1]-1):
                 if self.board[r, c] != 0 and self.board[r, c] == self.board[r, c+1]:
-                    self.sum_score += 2 * self.board[r, c]
+                    self.sum_score += int(2 * self.board[r, c])
                     self.board[r, c] *= 2
                     self.board[r, c+1] = 0
                     changed = True
@@ -637,10 +637,14 @@ class GamePanel:
         }
     }
     FONT = ("Verdana", 24, "bold")
-    UP_KEYS = ("w", "W", "Up")
-    LEFT_KEYS = ("a", "A", "Left")
-    DOWN_KEYS = ("s", "S", "Down")
-    RIGHT_KEYS = ("d", "D", "Right")
+
+    UP_KEYS = ("Up")
+    LEFT_KEYS = ("Left")
+    DOWN_KEYS = ("Down")
+    RIGHT_KEYS = ("Right")
+    NEW_GAME_KEYS = ("n", "N")
+    SAVE_GAME_KEYS = ("s", "S")
+    LOAD_GAME_KEYS = ("l", "L")
 
     def __init__(self, board_shape: Tuple[int, int]):
         self.board_shape = board_shape
@@ -693,6 +697,12 @@ class GameHandler:
                 self.game.play_move_and_add_board_randomization(Move.DOWN)
             elif key_value in GamePanel.RIGHT_KEYS:
                 self.game.play_move_and_add_board_randomization(Move.RIGHT)
+            elif key_value in GamePanel.NEW_GAME_KEYS:
+                self.game.reset()
+            elif key_value in GamePanel.SAVE_GAME_KEYS:
+                self.game.save()
+            elif key_value in GamePanel.LOAD_GAME_KEYS:
+                raise NotImplementedError
 
             game_panel.paint(self.game)
 
