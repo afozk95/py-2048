@@ -2,7 +2,11 @@
 2048 implemented in Python
 
 # TODO
-- implement gui
 - make it RL env like?
 - AI player
-- save / load game
+- add save option while playing game
+- add new game / load game selection (new GameHandler class ?) (Terminal)
+- add messagebox when game is over (GUI)
+- show score (GUI)
+- initial screen (new game / load game) (GUI)
+- save game (GUI) 

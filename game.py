@@ -1,10 +1,12 @@
 from __future__ import annotations
 from typing import Any, Dict, Optional, Tuple, Union
 from aenum import MultiValueEnum
+from collections import defaultdict
 from pathlib import Path
 import json
 import numpy as np
 import datetime as dt
+import tkinter as tk
 
 
 class Move(MultiValueEnum):
@@ -415,6 +417,27 @@ class Game:
         elif move == Move.DOWN:
             changed = self.play_move_down()
         return changed
+    
+    def play_move_and_add_board_randomization(self, move: Move) -> None:
+        """Play given `move` and add board randomization if change occurred
+
+        Args:
+            move (Move): move to play
+
+        Returns:
+            bool: whether anything has changed in board
+        """
+        if move == Move.LEFT:
+            changed = self.play_move_left()
+        elif move == Move.RIGHT:
+            changed = self.play_move_right()
+        elif move == Move.UP:
+            changed = self.play_move_up()
+        elif move == Move.DOWN:
+            changed = self.play_move_down()
+        
+        if changed:
+            self.add_board_randomization()
 
     def parse_move(self, move_str: str) -> Optional[Move]:
         """Parses given move str
@@ -575,6 +598,111 @@ class Game:
         return Game.deserialize(game_dct)
 
 
+class GamePanel:
+    '''The GUI view class of the 2048 game showing via tkinter.'''
+    CELL_PADDING = 10
+    FRAME_BACKGROUND_COLOR = "#92877d"
+    CELL_BACKGROUND_COLOR_DICT = {
+        **defaultdict(lambda _: "#3c3a32"),
+        **{
+            0: "#9e948a",
+            2: "#eee4da",
+            4: "#ede0c8",
+            8: "#f2b179",
+            16: "#f59563",
+            32: "#f67c5f",
+            64: "#f65e3b",
+            128: "#edcf72",
+            256: "#edcc61",
+            512: "#edc850",
+            1024: "#edc53f",
+            2048: "#edc22e",
+        }
+    }
+    CELL_COLOR_DICT = {
+        **defaultdict(lambda _: "#f9f6f2"),
+        **{
+            0: None,
+            2: "#776e65",
+            4: "#776e65",
+            8: "#f9f6f2",
+            16: "#f9f6f2",
+            32: "#f9f6f2",
+            64: "#f9f6f2",
+            128: "#f9f6f2",
+            256: "#f9f6f2",
+            512: "#f9f6f2",
+            1024: "#f9f6f2",
+            2048: "#f9f6f2",
+        }
+    }
+    FONT = ("Verdana", 24, "bold")
+    UP_KEYS = ("w", "W", "Up")
+    LEFT_KEYS = ("a", "A", "Left")
+    DOWN_KEYS = ("s", "S", "Down")
+    RIGHT_KEYS = ("d", "D", "Right")
+
+    def __init__(self, board_shape: Tuple[int, int]):
+        self.board_shape = board_shape
+        self.root = tk.Tk()
+        self.root.title("2048")
+        self.background = tk.Frame(self.root, bg=GamePanel.FRAME_BACKGROUND_COLOR)
+        self.cell_labels = []
+        for r in range(self.board_shape[0]):
+            row_labels = []
+            for c in range(self.board_shape[1]):
+                label = tk.Label(
+                    self.background,
+                    text="",
+                    bg=GamePanel.CELL_BACKGROUND_COLOR_DICT.get(0),
+                    justify=tk.CENTER,
+                    font=GamePanel.FONT,
+                    width=4,
+                    height=2,
+                )
+                label.grid(row=r, column=c, padx=10, pady=10)
+                row_labels.append(label)
+            self.cell_labels.append(row_labels)
+        self.background.grid()
+
+    def paint(self, game: Game) -> None:
+        for r in range(self.board_shape[0]):
+            for c in range(self.board_shape[1]):
+                cell_value = game.board[r, c]
+                text = "" if cell_value == 0 else str(cell_value)
+                bg = GamePanel.CELL_BACKGROUND_COLOR_DICT[cell_value]
+                fg = GamePanel.CELL_COLOR_DICT[cell_value]
+                self.cell_labels[r][c].configure(text=text, bg=bg, fg=fg)
+
+
+class GameHandler:
+    def __init__(self, game: Optional[Game] = None) -> None:
+        self.game = game if game else Game(board_shape=4, random_config={"count": 1, "probs": {2: 1}})
+
+    def play_on_terminal(self) -> None:
+        self.game.start()
+
+    def play_on_gui(self) -> None:
+        def key_handler(event: tk.Event) -> None:
+            key_value = event.keysym
+            if key_value in GamePanel.UP_KEYS:
+                self.game.play_move_and_add_board_randomization(Move.UP)
+            elif key_value in GamePanel.LEFT_KEYS:
+                self.game.play_move_and_add_board_randomization(Move.LEFT)
+            elif key_value in GamePanel.DOWN_KEYS:
+                self.game.play_move_and_add_board_randomization(Move.DOWN)
+            elif key_value in GamePanel.RIGHT_KEYS:
+                self.game.play_move_and_add_board_randomization(Move.RIGHT)
+
+            game_panel.paint(self.game)
+
+        game_panel = GamePanel(self.game.board_shape)
+        game_panel.root.bind("<Key>", key_handler)
+        game_panel.paint(self.game)
+        game_panel.root.mainloop()
+
+
 if __name__ == "__main__":
-    g = Game(board_shape=4, random_config={"count": 1, "probs": {2: 1}})
-    g.start()
+    gh = GameHandler()
+    gh.play_on_gui()
+    # gh.play_on_terminal()
